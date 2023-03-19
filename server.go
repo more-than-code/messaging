@@ -1,6 +1,7 @@
-package email
+package messaging
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/more-than-code/messaging/pb"
@@ -24,7 +26,6 @@ import (
 type ServerConfig struct {
 	EmailDomains string `envconfig:"EMAIL_DOMAINS"`
 	BypassCode   string `envconfig:"BYPASS_CODE"`
-	AppName      string `envconfig:"APP_NAME"`
 }
 
 type Server struct {
@@ -32,7 +33,7 @@ type Server struct {
 	mailVendor *sender.MailVendor
 	repo       *repository.Repository
 	cfg        *ServerConfig
-	pb.UnimplementedEmailServer
+	pb.UnimplementedMessagingServer
 }
 
 func NewServer(port int) error {
@@ -65,7 +66,7 @@ func NewServer(port int) error {
 		log.Fatal(err)
 	}
 
-	pb.RegisterEmailServer(grpcServer, &Server{smsVendor: smsVendor, mailVendor: mailVendor, repo: repo, cfg: &cfg})
+	pb.RegisterMessagingServer(grpcServer, &Server{smsVendor: smsVendor, mailVendor: mailVendor, repo: repo, cfg: &cfg})
 	err = grpcServer.Serve(lis)
 
 	if err != nil {
@@ -90,7 +91,7 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 			str := fmt.Sprintf("Code sent for %s within 1 minute", req.PhoneOrEmail)
 			fmt.Println(str)
 
-			res.Code = constant.ErrCodeTooFrequentlySendingVerificationCode
+			res.Code = constant.CodeTooFrequentlySendingVerificationCode
 			res.Msg = constant.MsgTooFrequentlySendingVerificationCode
 
 			return res, nil
@@ -99,12 +100,16 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 
 	code := strconv.Itoa(rand.Intn(9000) + 1000)
 
+	message, err := templateToMessage(req.MessageTemplate, code)
+
+	if err != nil {
+		return nil, err
+	}
+
 	if util.IsEmail(req.PhoneOrEmail) {
-		err = s.mailVendor.SendCodeFromPostmark(req.PhoneOrEmail, s.cfg.AppName+constant.SmsSubject, fmt.Sprintf("%s%s:<strong>%s</strong>", s.cfg.AppName, purposeToMessage(req.Purpose), code))
+		err = s.mailVendor.SendCodeFromPostmark(req.PhoneOrEmail, req.Subject, message)
 	} else {
-
-		err = s.smsVendor.SendCodeGlobe(req.PhoneOrEmail, s.cfg.AppName+purposeToMessage(req.Purpose)+": "+code)
-
+		err = s.smsVendor.SendCodeGlobe(req.PhoneOrEmail, message)
 	}
 
 	if err != nil {
@@ -144,11 +149,11 @@ func (s *Server) VerifyCode(ctx context.Context, req *pb.VerifyCodeRequest) (*pb
 		} else {
 			if found.Attempt >= 3 {
 				errMsg = constant.MsgMaximumAttemptsOnVerificationCode
-				errCode = constant.ErrCodeMaximumAttemptsOnVerificationCode
+				errCode = constant.CodeMaximumAttemptsOnVerificationCode
 				s.repo.DeleteVerificationInfo(ctx, req.PhoneOrEmail)
 			} else if found.Code != req.VerificationCode {
 				errMsg = constant.MsgWrongVerificationCode
-				errCode = constant.ErrCodeWrongVerificationCode
+				errCode = constant.CodeWrongVerificationCode
 
 				found.Attempt++
 				s.repo.SetVerificationInfo(ctx, req.PhoneOrEmail, found)
@@ -157,23 +162,25 @@ func (s *Server) VerifyCode(ctx context.Context, req *pb.VerifyCodeRequest) (*pb
 
 	} else {
 		errMsg = constant.MsgExpiredVerificationCode
-		errCode = constant.ErrCodeExpiredVerificationCode
+		errCode = constant.CodeExpiredVerificationCode
 	}
 
 	return &pb.VerifyCodeResponse{Code: int32(errCode), Msg: errMsg}, nil
 }
 
-func purposeToMessage(purpose int32) string {
-	switch purpose {
-	case constant.PurposeRegistration:
-		return constant.SmsRegistration
-	case constant.PurposeLogin:
-		return constant.SmsLogin
-	case constant.PurposeResettingPassword:
-		return constant.SmsResettingPassword
-	case constant.PurposeBindingPhoneOrEmail:
-		return constant.SmsBindingPhoneOrEmail
-	default:
-		return ""
+func templateToMessage(msgTemplate string, code string) (string, error) {
+	tmpl, err := template.New("message").Parse(msgTemplate)
+
+	if err != nil {
+		return "", err
 	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, struct{ Code string }{code})
+
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }

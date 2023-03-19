@@ -21,14 +21,6 @@ const (
 )
 
 const (
-	SmsSubject             = "驗證碼"
-	SmsRegistration        = "註冊的驗證碼(5分鐘內有效)"
-	SmsLogin               = "登錄的驗證碼(5分鐘內有效)"
-	SmsResettingPassword   = "重置密碼的驗證碼(5分鐘內有效)"
-	SmsBindingPhoneOrEmail = "綁定手機或郵箱的驗證碼(5分鐘內有效)"
-)
-
-const (
 	ExHttpStatusAuthenticationFailure = 460
 	ExHttpStatusBusinessError         = 461
 )
@@ -63,19 +55,6 @@ const (
 	CodeServiceBadGateway          = 5002
 	CodeServiceServiceUnavailable  = 5003
 	CodeServiceGatewayTimeout      = 5004
-
-	// TODO: remove deprecated ones
-	ErrCodeSystemError = -1
-
-	ErrCodeExistingUser    = 1000
-	ErrCodeNonexistingUser = 1001
-	ErrCodeWrongPassword   = 1002
-
-	ErrCodeExpiredVerificationCode              = 2000
-	ErrCodeWrongVerificationCode                = 2001
-	ErrCodeTooFrequentlySendingVerificationCode = 2002
-	ErrCodeNeedingResendingVerificationCode     = 2003
-	ErrCodeMaximumAttemptsOnVerificationCode    = 2004
 )
 
 const (
@@ -101,13 +80,6 @@ const (
 	MsgDataMarshalingFailure    = "data marshaling failure"
 
 	MsgUnderlyingRequestFailure = "target request failure"
-
-	// TODO: remove deprecated ones
-	MsgSystemError     = "system error"
-	MsgUnprivileged    = "unprivileged"
-	MsgWrongParameters = "wrong parameters"
-
-	MsgCodeWrongPassword = "wrong password"
 )
 
 func TranslateToHttpStatusCode(code int) int {
