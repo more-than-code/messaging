@@ -26,6 +26,7 @@ import (
 type ServerConfig struct {
 	EmailDomains string `envconfig:"EMAIL_DOMAINS"`
 	BypassCode   string `envconfig:"BYPASS_CODE"`
+	ServerPort   string `envconfig:"SERVER_PORT"`
 }
 
 type Server struct {
@@ -36,8 +37,15 @@ type Server struct {
 	pb.UnimplementedMessagingServer
 }
 
-func NewServer(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+func NewServer() error {
+	var cfg ServerConfig
+	err := envconfig.Process("", &cfg)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	lis, err := net.Listen("tcp", cfg.ServerPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -57,13 +65,6 @@ func NewServer(port int) error {
 	repo, err := repository.NewRepository()
 	if err != nil {
 		return err
-	}
-
-	var cfg ServerConfig
-	err = envconfig.Process("", &cfg)
-
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	pb.RegisterMessagingServer(grpcServer, &Server{smsVendor: smsVendor, mailVendor: mailVendor, repo: repo, cfg: &cfg})
