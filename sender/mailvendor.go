@@ -8,8 +8,6 @@ import (
 
 	"github.com/keighl/postmark"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 type MailVendor struct {
@@ -17,8 +15,8 @@ type MailVendor struct {
 }
 
 type MailConfig struct {
-	SendgridApiKey string `envconfig:"SENDGRID_API_KEY"`
-	PostmarkApiKey string `envconfig:"POSTMARK_API_KEY"`
+	PostmarkApiKey      string `envconfig:"POSTMARK_API_KEY"`
+	PostmarkEmailSender string `envconfig:"POSTMARK_MAIL_SENDER"`
 }
 
 func NewMailVendor() (*MailVendor, error) {
@@ -31,25 +29,6 @@ func NewMailVendor() (*MailVendor, error) {
 	return &MailVendor{cfg: cfg}, nil
 }
 
-func (v *MailVendor) SendCode(mailAddress, sub, msg string) error {
-	from := mail.NewEmail("毛孩街 support", "support@mohiguide.com")
-	subject := sub
-	to := mail.NewEmail("毛孩街用戶", mailAddress)
-	plainTextContent := msg
-	htmlContent := fmt.Sprintf("<strong>%s</strong>", msg)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(v.cfg.SendgridApiKey)
-	response, err := client.Send(message)
-	if err != nil {
-		log.Println(err)
-	} else {
-		fmt.Println(response.StatusCode)
-		fmt.Println(response.Body)
-		fmt.Println(response.Headers)
-	}
-	return err
-}
-
 func (v *MailVendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
@@ -57,7 +36,7 @@ func (v *MailVendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
 	client := postmark.NewClient(v.cfg.PostmarkApiKey, "")
 
 	email := postmark.Email{
-		From:     "support@mohiguide.com",
+		From:     v.cfg.PostmarkEmailSender,
 		To:       mailAddress,
 		Subject:  subject,
 		HtmlBody: htmlContent,

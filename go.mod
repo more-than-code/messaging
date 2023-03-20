@@ -8,7 +8,6 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/redis/go-redis/v9 v9.0.2
-	github.com/sendgrid/sendgrid-go v3.12.0+incompatible
 	go.mongodb.org/mongo-driver v1.11.2
 	golang.org/x/crypto v0.6.0
 	google.golang.org/grpc v1.53.0
@@ -25,7 +24,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
-	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	goji.io v2.0.2+incompatible // indirect
 	golang.org/x/net v0.6.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
