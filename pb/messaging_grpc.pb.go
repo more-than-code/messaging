@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MessagingClient interface {
 	GenerateVerificationCode(ctx context.Context, in *GenerateVerificationCodeRequest, opts ...grpc.CallOption) (*GenerateVerificationCodeResponse, error)
-	ValidateVerificationCode(ctx context.Context, in *VerifyCodeRequest, opts ...grpc.CallOption) (*VerifyCodeResponse, error)
+	ValidateVerificationCode(ctx context.Context, in *ValidateVerificationCodeRequest, opts ...grpc.CallOption) (*ValidateVerificationCodeResponse, error)
 }
 
 type messagingClient struct {
@@ -43,8 +43,8 @@ func (c *messagingClient) GenerateVerificationCode(ctx context.Context, in *Gene
 	return out, nil
 }
 
-func (c *messagingClient) ValidateVerificationCode(ctx context.Context, in *VerifyCodeRequest, opts ...grpc.CallOption) (*VerifyCodeResponse, error) {
-	out := new(VerifyCodeResponse)
+func (c *messagingClient) ValidateVerificationCode(ctx context.Context, in *ValidateVerificationCodeRequest, opts ...grpc.CallOption) (*ValidateVerificationCodeResponse, error) {
+	out := new(ValidateVerificationCodeResponse)
 	err := c.cc.Invoke(ctx, "/pb.Messaging/ValidateVerificationCode", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (c *messagingClient) ValidateVerificationCode(ctx context.Context, in *Veri
 // for forward compatibility
 type MessagingServer interface {
 	GenerateVerificationCode(context.Context, *GenerateVerificationCodeRequest) (*GenerateVerificationCodeResponse, error)
-	ValidateVerificationCode(context.Context, *VerifyCodeRequest) (*VerifyCodeResponse, error)
+	ValidateVerificationCode(context.Context, *ValidateVerificationCodeRequest) (*ValidateVerificationCodeResponse, error)
 	mustEmbedUnimplementedMessagingServer()
 }
 
@@ -68,7 +68,7 @@ type UnimplementedMessagingServer struct {
 func (UnimplementedMessagingServer) GenerateVerificationCode(context.Context, *GenerateVerificationCodeRequest) (*GenerateVerificationCodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateVerificationCode not implemented")
 }
-func (UnimplementedMessagingServer) ValidateVerificationCode(context.Context, *VerifyCodeRequest) (*VerifyCodeResponse, error) {
+func (UnimplementedMessagingServer) ValidateVerificationCode(context.Context, *ValidateVerificationCodeRequest) (*ValidateVerificationCodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateVerificationCode not implemented")
 }
 func (UnimplementedMessagingServer) mustEmbedUnimplementedMessagingServer() {}
@@ -103,7 +103,7 @@ func _Messaging_GenerateVerificationCode_Handler(srv interface{}, ctx context.Co
 }
 
 func _Messaging_ValidateVerificationCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VerifyCodeRequest)
+	in := new(ValidateVerificationCodeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func _Messaging_ValidateVerificationCode_Handler(srv interface{}, ctx context.Co
 		FullMethod: "/pb.Messaging/ValidateVerificationCode",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessagingServer).ValidateVerificationCode(ctx, req.(*VerifyCodeRequest))
+		return srv.(MessagingServer).ValidateVerificationCode(ctx, req.(*ValidateVerificationCodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

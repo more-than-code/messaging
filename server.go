@@ -12,11 +12,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/more-than-code/messaging/constant"
 	"github.com/more-than-code/messaging/pb"
 	"github.com/more-than-code/messaging/repository"
 	"github.com/more-than-code/messaging/sender"
 
-	"github.com/more-than-code/messaging/constant"
 	"github.com/more-than-code/messaging/util"
 
 	"github.com/kelseyhightower/envconfig"
@@ -77,7 +77,7 @@ func NewServer(port int) error {
 }
 
 func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateVerificationCodeRequest) (*pb.GenerateVerificationCodeResponse, error) {
-	res := &pb.GenerateVerificationCodeResponse{Code: 0, Msg: "Done"}
+	res := &pb.GenerateVerificationCodeResponse{Status: pb.VerificationCodeGenerationStatus_VERIFICATION_CODE_GENERATION_STATUS_DONE, Msg: string(constant.MsgDone)}
 	var err error
 
 	found, err := s.repo.GetVerificationInfo(ctx, req.PhoneOrEmail)
@@ -91,8 +91,8 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 			str := fmt.Sprintf("Code sent for %s within 1 minute", req.PhoneOrEmail)
 			fmt.Println(str)
 
-			res.Code = constant.CodeTooFrequentlySendingVerificationCode
-			res.Msg = constant.MsgTooFrequentlySendingVerificationCode
+			res.Status = pb.VerificationCodeGenerationStatus_VERIFICATION_CODE_GENERATION_STATUS_SENDING_TOO_FREQUENTLY
+			res.Msg = string(constant.MsgSendingTooFrequently)
 
 			return res, nil
 		}
@@ -129,12 +129,12 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	return res, nil
 }
 
-func (s *Server) VerifyCode(ctx context.Context, req *pb.VerifyCodeRequest) (*pb.VerifyCodeResponse, error) {
-	var errMsg = "Verified"
-	var errCode = 0
+func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateVerificationCodeRequest) (*pb.ValidateVerificationCodeResponse, error) {
+	var msg = constant.MsgValid
+	var status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_VALID
 
 	if util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.BypassCode {
-		return &pb.VerifyCodeResponse{Code: int32(errCode), Msg: errMsg}, nil
+		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 	}
 
 	found, err := s.repo.GetVerificationInfo(ctx, req.PhoneOrEmail)
@@ -148,24 +148,23 @@ func (s *Server) VerifyCode(ctx context.Context, req *pb.VerifyCodeRequest) (*pb
 			s.repo.DeleteVerificationInfo(ctx, req.PhoneOrEmail)
 		} else {
 			if found.Attempt >= 3 {
-				errMsg = constant.MsgMaximumAttemptsOnVerificationCode
-				errCode = constant.CodeMaximumAttemptsOnVerificationCode
+				msg = constant.MsgMaximumAttempts
+				status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_MAXIMUM_ATTEMPTS
 				s.repo.DeleteVerificationInfo(ctx, req.PhoneOrEmail)
 			} else if found.Code != req.VerificationCode {
-				errMsg = constant.MsgWrongVerificationCode
-				errCode = constant.CodeWrongVerificationCode
-
+				msg = constant.MsgInvalid
+				status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_INVALID
 				found.Attempt++
 				s.repo.SetVerificationInfo(ctx, req.PhoneOrEmail, found)
 			}
 		}
 
 	} else {
-		errMsg = constant.MsgExpiredVerificationCode
-		errCode = constant.CodeExpiredVerificationCode
+		msg = constant.MsgExpired
+		status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_EXPIRED
 	}
 
-	return &pb.VerifyCodeResponse{Code: int32(errCode), Msg: errMsg}, nil
+	return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 }
 
 func templateToMessage(msgTemplate string, code string) (string, error) {
