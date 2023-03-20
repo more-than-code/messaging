@@ -73,7 +73,7 @@ func (v *MailVendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	arg5_1 := "-H"
 	arg5_2 := fmt.Sprintf("X-Postmark-Server-Token: %s", v.cfg.PostmarkApiKey)
 	arg6_1 := "-d"
-	arg6_2 := fmt.Sprintf("{From: 'support@mohiguide.com', To: '%s', Subject: '%s', HtmlBody: '%s'}", mailAddress, subject, htmlContent)
+	arg6_2 := fmt.Sprintf("{From: '%s', To: '%s', Subject: '%s', HtmlBody: '%s'}", v.cfg.PostmarkEmailSender, mailAddress, subject, htmlContent)
 
 	cmd := exec.Command(prg, arg1, arg2_1, arg2_2, arg3_1, arg3_2, arg4_1, arg4_2, arg5_1, arg5_2, arg6_1, arg6_2)
 	stdout, err := cmd.Output()
