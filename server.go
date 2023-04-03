@@ -26,7 +26,7 @@ import (
 type ServerConfig struct {
 	EmailDomains string `envconfig:"EMAIL_DOMAINS"`
 	BypassCode   string `envconfig:"BYPASS_CODE"`
-	ServerPort   string `envconfig:"SERVER_PORT"`
+	ServerPort   string `envconfig:"MESSAGING_SERVER_PORT"`
 }
 
 type Server struct {
