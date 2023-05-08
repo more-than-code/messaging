@@ -1,13 +1,7 @@
 package util
 
 import (
-	"fmt"
-	"math/rand"
-	"strconv"
 	"strings"
-	"time"
-	"unicode"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func IsEmail(phoneOrEmail string) bool {
