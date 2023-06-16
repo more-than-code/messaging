@@ -1,4 +1,4 @@
-package sender
+package sms
 
 import (
 	"fmt"
@@ -10,12 +10,12 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-type SmsVendor struct {
+type AliyunVendor struct {
 	clientGlobe *sdk.Client
-	cfg         Config
+	cfg         AliyunConfig
 }
 
-type Config struct {
+type AliyunConfig struct {
 	AppKeyId          string `envconfig:"SMS_ACCESS_KEY_ID"`
 	AppKeySecret      string `envconfig:"SMS_ACCESS_KEY_SECRET"`
 	SignName          string `envconfig:"SMS_SIGN_NAME"`
@@ -28,7 +28,7 @@ func CreateClientGlobe(accessKeyId string, accessKeySecret string) (*sdk.Client,
 	return sdk.NewClientWithAccessKey("ap-southeast-1", accessKeyId, accessKeySecret)
 }
 
-func (v *SmsVendor) SendCodeGlobe(phoneNumber, msg string) error {
+func (v *AliyunVendor) SendCodeGlobe(phoneNumber, msg string) error {
 	request := requests.NewCommonRequest()
 	request.Method = "POST"
 	request.Scheme = "https"
@@ -46,8 +46,8 @@ func (v *SmsVendor) SendCodeGlobe(phoneNumber, msg string) error {
 	return err
 }
 
-func NewSmsVendor() (*SmsVendor, error) {
-	var cfg Config
+func NewAliyunVendor() (*AliyunVendor, error) {
+	var cfg AliyunConfig
 	err := envconfig.Process("", &cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -58,5 +58,5 @@ func NewSmsVendor() (*SmsVendor, error) {
 		return nil, err
 	}
 
-	return &SmsVendor{clientGlobe: clientGlobe, cfg: cfg}, nil
+	return &AliyunVendor{clientGlobe: clientGlobe, cfg: cfg}, nil
 }

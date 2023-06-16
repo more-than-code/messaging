@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/more-than-code/messaging/constant"
+	"github.com/more-than-code/messaging/email-vendor"
 	"github.com/more-than-code/messaging/pb"
 	"github.com/more-than-code/messaging/repository"
-	"github.com/more-than-code/messaging/sender"
+	"github.com/more-than-code/messaging/sms-vendor"
 
 	"github.com/more-than-code/messaging/util"
 
@@ -30,8 +31,8 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	smsVendor  *sender.SmsVendor
-	mailVendor *sender.MailVendor
+	smsVendor  *sms.Vendor
+	mailVendor *email.Vendor
 	repo       *repository.Repository
 	cfg        *ServerConfig
 	pb.UnimplementedMessagingServer
@@ -52,12 +53,12 @@ func NewServer() error {
 	var opts []grpc.ServerOption
 
 	grpcServer := grpc.NewServer(opts...)
-	smsVendor, err := sender.NewSmsVendor()
+	smsVendor, err := sms.NewVendor()
 	if err != nil {
 		return err
 	}
 
-	mailVendor, err := sender.NewMailVendor()
+	mailVendor, err := email.NewVendor()
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	if util.IsEmail(req.PhoneOrEmail) {
 		err = s.mailVendor.SendCodeFromPostmark(req.PhoneOrEmail, req.Subject, message)
 	} else {
-		err = s.smsVendor.SendCodeGlobe(req.PhoneOrEmail, message)
+		err = s.smsVendor.SendCode(req.PhoneOrEmail, code)
 	}
 
 	if err != nil {

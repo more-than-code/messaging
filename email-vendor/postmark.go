@@ -1,4 +1,4 @@
-package sender
+package email
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-type MailVendor struct {
+type Vendor struct {
 	cfg MailConfig
 }
 
@@ -19,17 +19,17 @@ type MailConfig struct {
 	PostmarkEmailSender string `envconfig:"POSTMARK_MAIL_SENDER"`
 }
 
-func NewMailVendor() (*MailVendor, error) {
+func NewVendor() (*Vendor, error) {
 	var cfg MailConfig
 	err := envconfig.Process("", &cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return &MailVendor{cfg: cfg}, nil
+	return &Vendor{cfg: cfg}, nil
 }
 
-func (v *MailVendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
+func (v *Vendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
@@ -57,7 +57,7 @@ func (v *MailVendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *MailVendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
+func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
