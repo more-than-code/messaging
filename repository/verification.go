@@ -11,7 +11,8 @@ import (
 )
 
 type Config struct {
-	RedisUri string `envconfig:"REDIS_URI"`
+	RedisUri      string `envconfig:"REDIS_URI"`
+	RedisPassword string `envconfig:"REDIS_PASSWORD"`
 }
 
 type Repository struct {
@@ -33,8 +34,8 @@ func NewRepository() (*Repository, error) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisUri,
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Password: cfg.RedisPassword,
+		DB:       0, // use default DB
 	})
 
 	return &Repository{redisClient: redisClient}, nil

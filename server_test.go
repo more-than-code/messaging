@@ -1,6 +1,10 @@
 package messaging
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/more-than-code/messaging/sms-vendor"
+)
 
 func TestGenerateVerificationCode(t *testing.T) {
 	msg, err := templateToMessage("The code is {{.Code}}", "1234")
@@ -10,4 +14,10 @@ func TestGenerateVerificationCode(t *testing.T) {
 	}
 
 	t.Log(msg)
+}
+
+func TestSendSms(t *testing.T) {
+	v, _ := sms.NewVendor()
+
+	v.SendCode("+8618627079270", "test012")
 }
