@@ -171,7 +171,12 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 }
 
 func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailWithAttachmentRequest) (*pb.SendEmailWithAttachmentResponse, error) {
-	err := s.mailVendor.SendWithAttachment(req.To, req.Subject, req.Message, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
+	attachments := []postmark.Attachment{}
+	if req.Attachment != nil {
+		attachments = append(attachments, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
+	}
+
+	err := s.mailVendor.SendWithAttachment(req.To, req.Subject, req.Message, attachments)
 
 	if err != nil {
 		return nil, err

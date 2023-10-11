@@ -88,7 +88,7 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachment postmark.Attachment) error {
+func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachments []postmark.Attachment) error {
 	subject := sub
 	htmlContent := msg
 
@@ -99,7 +99,7 @@ func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachment pos
 		To:          mailAddress,
 		Subject:     subject,
 		HtmlBody:    htmlContent,
-		Attachments: []postmark.Attachment{attachment},
+		Attachments: attachments,
 		Tag:         "attachment",
 		TrackOpens:  true,
 	}
