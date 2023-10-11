@@ -20,29 +20,48 @@ enum VerificationCodeValidationStatus {
 }
 
 message GenerateVerificationCodeRequest {
-    string phone_or_email = 1;
-    string subject = 2;
-    string message_template = 3;
+  string phone_or_email = 1;
+  string subject = 2;
+  string message_template = 3;
 }
 
 message GenerateVerificationCodeResponse {
-    VerificationCodeGenerationStatus status = 1;
-    string msg = 2;
+  VerificationCodeGenerationStatus status = 1;
+  string msg = 2;
 }
 
 message ValidateVerificationCodeRequest {
-    string phone_or_email = 1;
-    string verification_code = 2;
+  string phone_or_email = 1;
+  string verification_code = 2;
 }
 
 message ValidateVerificationCodeResponse {
-    VerificationCodeValidationStatus status = 1;
-    string msg = 2; 
+  VerificationCodeValidationStatus status = 1;
+  string msg = 2; 
+}
+
+message Attachment {
+  string name = 1;
+  bytes content = 2;
+}
+
+message SendEmailWithAttachmentRequest {
+  string to = 1; 
+  string subject = 2;
+  string message = 3;
+  Attachment attachment = 4;
+}
+
+message SendEmailWithAttachmentResponse {
+  bool success = 1;
+  string msg = 2;
 }
 
 service Messaging {
-    rpc GenerateVerificationCode (GenerateVerificationCodeRequest) returns (GenerateVerificationCodeResponse) {
-    }
-    rpc ValidateVerificationCode (ValidateVerificationCodeRequest) returns (ValidateVerificationCodeResponse) {
-    }
+  rpc GenerateVerificationCode (GenerateVerificationCodeRequest) returns  (GenerateVerificationCodeResponse) {
+  }
+  rpc ValidateVerificationCode (ValidateVerificationCodeRequest) returns (ValidateVerificationCodeResponse) {
+  }
+  rpc SendEmailWithAttachment (SendEmailWithAttachmentRequest) returns (SendEmailWithAttachmentResponse) {
+  }
 }

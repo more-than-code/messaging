@@ -88,6 +88,34 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	return nil
 }
 
+func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachment postmark.Attachment) error {
+	subject := sub
+	htmlContent := msg
+
+	client := postmark.NewClient(v.cfg.PostmarkApiKey, "")
+
+	email := postmark.Email{
+		From:        v.cfg.PostmarkEmailSender,
+		To:          mailAddress,
+		Subject:     subject,
+		HtmlBody:    htmlContent,
+		Attachments: []postmark.Attachment{attachment},
+		Tag:         "attachment",
+		TrackOpens:  true,
+	}
+
+	res, err := client.SendEmail(email)
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	log.Println(res)
+
+	return nil
+}
+
 type Mail struct {
 	Sender  string
 	To      []string

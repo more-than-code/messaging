@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/keighl/postmark"
 	"github.com/more-than-code/messaging/constant"
 	"github.com/more-than-code/messaging/email-vendor"
 	"github.com/more-than-code/messaging/pb"
@@ -167,6 +168,16 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 	}
 
 	return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
+}
+
+func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailWithAttachmentRequest) (*pb.SendEmailWithAttachmentResponse, error) {
+	err := s.mailVendor.SendWithAttachment(req.To, req.Subject, req.Message, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.SendEmailWithAttachmentResponse{}, nil
 }
 
 func templateToMessage(msgTemplate string, code string) (string, error) {

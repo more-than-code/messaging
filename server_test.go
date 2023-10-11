@@ -19,5 +19,5 @@ func TestGenerateVerificationCode(t *testing.T) {
 func TestSendSms(t *testing.T) {
 	v, _ := sms.NewVendor()
 
-	v.SendCode("+8618627079270", "test012")
+	v.SendCode("85254997909", "test012")
 }
