@@ -88,7 +88,7 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachments []postmark.Attachment) error {
+func (v *Vendor) SendWithAttachment(to, bcc, sub, msg string, attachments []postmark.Attachment) error {
 	subject := sub
 	htmlContent := msg
 
@@ -96,7 +96,8 @@ func (v *Vendor) SendWithAttachment(mailAddress, sub, msg string, attachments []
 
 	email := postmark.Email{
 		From:        v.cfg.PostmarkEmailSender,
-		To:          mailAddress,
+		To:          to,
+		Bcc:         bcc,
 		Subject:     subject,
 		HtmlBody:    htmlContent,
 		Attachments: attachments,

@@ -176,7 +176,7 @@ func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailW
 		attachments = append(attachments, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
 	}
 
-	err := s.mailVendor.SendWithAttachment(req.To, req.Subject, req.Message, attachments)
+	err := s.mailVendor.SendWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
 
 	if err != nil {
 		return nil, err
