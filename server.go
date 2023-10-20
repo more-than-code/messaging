@@ -52,6 +52,7 @@ func NewServer() error {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	var opts []grpc.ServerOption
+	opts = append(opts, grpc.MaxRecvMsgSize(1024*1024*10))
 
 	grpcServer := grpc.NewServer(opts...)
 	smsVendor, err := sms.NewVendor()
