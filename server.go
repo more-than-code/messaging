@@ -28,6 +28,7 @@ import (
 type ServerConfig struct {
 	EmailDomains string `envconfig:"EMAIL_DOMAINS"`
 	BypassCode   string `envconfig:"BYPASS_CODE"`
+	IsDev        bool   `envconfig:"IS_DEV"`
 	ServerPort   string `envconfig:"SERVER_PORT"`
 }
 
@@ -136,6 +137,10 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateVerificationCodeRequest) (*pb.ValidateVerificationCodeResponse, error) {
 	var msg = constant.MsgValid
 	var status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_VALID
+
+	if s.cfg.IsDev {
+		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
+	}
 
 	if util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.BypassCode {
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
