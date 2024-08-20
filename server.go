@@ -26,15 +26,17 @@ import (
 )
 
 type ServerConfig struct {
-	EmailDomains string `envconfig:"EMAIL_DOMAINS"`
-	BypassCode   string `envconfig:"BYPASS_CODE"`
-	IsDev        bool   `envconfig:"IS_DEV"`
-	ServerPort   string `envconfig:"SERVER_PORT"`
+	SmsProvider   string `envconfig:"SMS_PROVIDER"`
+	EmailProvider string `envconfig:"EMAIL_PROVIDER"`
+	EmailDomains  string `envconfig:"EMAIL_DOMAINS"`
+	BypassCode    string `envconfig:"BYPASS_CODE"`
+	IsDev         bool   `envconfig:"IS_DEV"`
+	ServerPort    string `envconfig:"SERVER_PORT"`
 }
 
 type Server struct {
-	smsVendor  *sms.Vendor
-	mailVendor *email.Vendor
+	smsVendor  sms.SmsVendor
+	mailVendor email.EmailVendor
 	repo       *repository.Repository
 	cfg        *ServerConfig
 	pb.UnimplementedMessagingServer
@@ -56,7 +58,17 @@ func NewServer() error {
 	opts = append(opts, grpc.MaxRecvMsgSize(1024*1024*10))
 
 	grpcServer := grpc.NewServer(opts...)
-	smsVendor, err := sms.NewVendor()
+	var smsVendor sms.SmsVendor
+
+	switch cfg.SmsProvider {
+	case "VOLC":
+		smsVendor, err = sms.NewVolcVendor()
+	case "BYTEPLUS":
+		smsVendor, err = sms.NewBytePlusVendor()
+	default:
+		log.Fatal("Invalid SMS provider")
+	}
+
 	if err != nil {
 		return err
 	}
@@ -112,7 +124,7 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	}
 
 	if util.IsEmail(req.PhoneOrEmail) {
-		err = s.mailVendor.SendCodeFromPostmark(req.PhoneOrEmail, req.Subject, message)
+		err = s.mailVendor.SendCode(req.PhoneOrEmail, req.Subject, message)
 	} else {
 		err = s.smsVendor.SendCode(req.PhoneOrEmail, code)
 	}
@@ -182,7 +194,7 @@ func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailW
 		attachments = append(attachments, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
 	}
 
-	err := s.mailVendor.SendWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
+	err := s.mailVendor.SendEmailWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
 
 	if err != nil {
 		return nil, err

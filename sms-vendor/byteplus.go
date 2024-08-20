@@ -10,6 +10,7 @@ import (
 )
 
 type BytePlusVendor struct {
+	SmsVendor
 	cfg BytePlusConfig
 }
 

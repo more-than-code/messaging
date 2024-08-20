@@ -8,7 +8,7 @@ import (
 	"github.com/volcengine/volc-sdk-golang/service/sms"
 )
 
-type Vendor struct {
+type VolcVendor struct {
 	cfg VolcConfig
 }
 
@@ -21,17 +21,17 @@ type VolcConfig struct {
 	TemplateCn string `envconfig:"VOLC_TEMPLATE_CN"`
 }
 
-func NewVendor() (*Vendor, error) {
+func NewVolcVendor() (*VolcVendor, error) {
 	var cfg VolcConfig
 	err := envconfig.Process("", &cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Vendor{cfg: cfg}, nil
+	return &VolcVendor{cfg: cfg}, nil
 }
 
-func (v *Vendor) SendCode(phoneNumber, code string) error {
+func (v *VolcVendor) SendCode(phoneNumber, code string) error {
 	sms.DefaultInstance.Client.SetAccessKey(v.cfg.AccessKey)
 	sms.DefaultInstance.Client.SetSecretKey(v.cfg.SecretKey)
 
@@ -58,7 +58,7 @@ func (v *Vendor) SendCode(phoneNumber, code string) error {
 	return err
 }
 
-func (v *Vendor) SendCodeNProduct(phoneNumber, code, product string) error {
+func (v *VolcVendor) SendCodeNProduct(phoneNumber, code, product string) error {
 	sms.DefaultInstance.Client.SetAccessKey(v.cfg.AccessKey)
 	sms.DefaultInstance.Client.SetSecretKey(v.cfg.SecretKey)
 

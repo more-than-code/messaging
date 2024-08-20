@@ -29,7 +29,7 @@ func NewVendor() (*Vendor, error) {
 	return &Vendor{cfg: cfg}, nil
 }
 
-func (v *Vendor) SendCodeFromPostmark(mailAddress, sub, msg string) error {
+func (v *Vendor) SendCode(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
@@ -88,7 +88,7 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendWithAttachment(to, bcc, sub, msg string, attachments []postmark.Attachment) error {
+func (v *Vendor) SendEmailWithAttachment(to, bcc, sub, msg string, attachments []postmark.Attachment) error {
 	subject := sub
 	htmlContent := msg
 
