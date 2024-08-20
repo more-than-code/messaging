@@ -8,13 +8,14 @@ require (
 	github.com/keighl/postmark v0.0.0-20190821160221-28358b1a94e3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/redis/go-redis/v9 v9.5.1
-	github.com/volcengine/volc-sdk-golang v1.0.154
+	github.com/volcengine/volc-sdk-golang v1.0.167
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
 
 require (
 	github.com/alibabacloud-go/debug v1.0.0 // indirect
+	github.com/byteplus-sdk/byteplus-sdk-golang v1.0.29 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect

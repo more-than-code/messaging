@@ -18,6 +18,16 @@ func TestGenerateVerificationCode(t *testing.T) {
 
 func TestSendSms(t *testing.T) {
 	v, _ := sms.NewVendor()
+	//85254997909
+	//8108039627413
+	// v.SendCode("8108039627413", "test0123")
+	v.SendCodeNProduct("85254997909", "test012", "TestProduct")
+}
 
-	v.SendCode("85254997909", "test012")
+func TestBytePluysSendSms(t *testing.T) {
+	v, _ := sms.NewBytePlusVendor()
+	//85254997909
+	//8108039627413
+	// v.SendCode("8108039627413", "test0123")
+	v.SendCodeNProduct("8108039627413", "01234", "TestProduct")
 }
