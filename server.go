@@ -32,6 +32,7 @@ type ServerConfig struct {
 	BypassCode    string `envconfig:"BYPASS_CODE"`
 	IsDev         bool   `envconfig:"IS_DEV"`
 	ServerPort    string `envconfig:"SERVER_PORT"`
+	ProductName   string `envconfig:"PRODUCT_NAME"`
 }
 
 type Server struct {
@@ -126,7 +127,7 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	if util.IsEmail(req.PhoneOrEmail) {
 		err = s.mailVendor.SendCode(req.PhoneOrEmail, req.Subject, message)
 	} else {
-		err = s.smsVendor.SendCode(req.PhoneOrEmail, code)
+		err = s.smsVendor.SendCodeNProduct(req.PhoneOrEmail, code, s.cfg.ProductName)
 	}
 
 	if err != nil {
