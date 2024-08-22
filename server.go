@@ -155,7 +155,7 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 	}
 
-	if util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.BypassCode {
+	if (util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) || !util.IsEmail(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.BypassCode {
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 	}
 
