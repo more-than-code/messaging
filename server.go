@@ -26,13 +26,14 @@ import (
 )
 
 type ServerConfig struct {
-	SmsProvider   string `envconfig:"SMS_PROVIDER"`
-	EmailProvider string `envconfig:"EMAIL_PROVIDER"`
-	EmailDomains  string `envconfig:"EMAIL_DOMAINS"`
-	BypassCode    string `envconfig:"BYPASS_CODE"`
-	IsDev         bool   `envconfig:"IS_DEV"`
-	ServerPort    string `envconfig:"SERVER_PORT"`
-	ProductName   string `envconfig:"PRODUCT_NAME"`
+	SmsProvider     string `envconfig:"SMS_PROVIDER"`
+	EmailProvider   string `envconfig:"EMAIL_PROVIDER"`
+	EmailDomains    string `envconfig:"EMAIL_DOMAINS"`
+	EmailBypassCode string `envconfig:"EMAIL_BYPASS_CODE"`
+	PhoneBypassCode string `envconfig:"PHONE_BYPASS_CODE"`
+	IsDev           bool   `envconfig:"IS_DEV"`
+	ServerPort      string `envconfig:"SERVER_PORT"`
+	ProductName     string `envconfig:"PRODUCT_NAME"`
 }
 
 type Server struct {
@@ -155,8 +156,11 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 	}
 
-	if (util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) || !util.IsEmail(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.BypassCode {
+	if util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.EmailBypassCode {
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
+	} else if !util.IsEmail(req.PhoneOrEmail) && req.VerificationCode == s.cfg.PhoneBypassCode {
+		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
+
 	}
 
 	found, err := s.repo.GetVerificationInfo(ctx, req.PhoneOrEmail)
