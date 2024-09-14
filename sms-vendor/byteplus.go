@@ -19,6 +19,7 @@ type BytePlusConfig struct {
 	SecretKey string `envconfig:"BYTEPLUS_SECRETKEY"`
 	Account   string `envconfig:"BYTEPLUS_ACCOUNT"`
 	Template  string `envconfig:"BYTEPLUS_TEMPLATE"`
+	Sender    string `envconfig:"BYTEPLUS_SENDER"`
 }
 
 func NewBytePlusVendor() (*BytePlusVendor, error) {
@@ -67,7 +68,7 @@ func (v *BytePlusVendor) SendCodeNProduct(phoneNumber, code, product string) err
 		TemplateID:    v.cfg.Template,
 		TemplateParam: fmt.Sprintf(`{"code": "%s", "product": "%s"}`, code, product),
 		PhoneNumbers:  phoneNumber,
-		From:          "SaasifyEase",
+		From:          v.cfg.Sender,
 		Tag:           "msgs",
 	}
 	result, statusCode, err := i18nInstance.Send(req)
