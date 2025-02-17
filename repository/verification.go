@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -42,7 +43,7 @@ func NewRepository() (*Repository, error) {
 }
 
 func (r *Repository) GetVerificationInfo(ctx context.Context, phoneOrEmail string) (*VerificationInfo, error) {
-	str, err := r.redisClient.Get(ctx, phoneOrEmail).Result()
+	str, err := r.redisClient.Get(ctx, strings.ToLower(phoneOrEmail)).Result()
 
 	var found *VerificationInfo
 
@@ -67,7 +68,7 @@ func (r *Repository) SetVerificationInfo(ctx context.Context, phoneOrEmail strin
 	if err != nil {
 		return err
 	}
-	return r.redisClient.Set(ctx, phoneOrEmail, str, time.Minute*5).Err()
+	return r.redisClient.Set(ctx, strings.ToLower(phoneOrEmail), str, time.Minute*5).Err()
 }
 
 func (r *Repository) DeleteVerificationInfo(ctx context.Context, phoneOrEmail string) error {
