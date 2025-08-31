@@ -12,7 +12,8 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/keighl/postmark"
+	"encoding/base64"
+
 	"github.com/more-than-code/messaging/constant"
 	"github.com/more-than-code/messaging/email-vendor"
 	"github.com/more-than-code/messaging/pb"
@@ -194,9 +195,11 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 }
 
 func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailWithAttachmentRequest) (*pb.SendEmailWithAttachmentResponse, error) {
-	attachments := []postmark.Attachment{}
+	attachments := []email.Attachment{}
 	if req.Attachment != nil {
-		attachments = append(attachments, postmark.Attachment{Name: req.Attachment.Name, Content: string(req.Attachment.Content), ContentType: "application/octet-stream"})
+		// PB Attachment content is bytes; email.Attachment expects base64-encoded string
+		encoded := base64.StdEncoding.EncodeToString(req.Attachment.Content)
+		attachments = append(attachments, email.Attachment{Name: req.Attachment.Name, Content: encoded, ContentType: "application/octet-stream"})
 	}
 
 	err := s.mailVendor.SendEmailWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
