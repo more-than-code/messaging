@@ -38,10 +38,9 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	smsVendor  sms.SmsVendor
-	mailVendor email.EmailVendor
-	repo       *repository.Repository
-	cfg        *ServerConfig
+	smsVendor sms.SmsVendor
+	repo      *repository.Repository
+	cfg       *ServerConfig
 	pb.UnimplementedMessagingServer
 }
 
@@ -76,17 +75,12 @@ func NewServer() error {
 		return err
 	}
 
-	mailVendor, err := email.NewVendor()
-	if err != nil {
-		return err
-	}
-
 	repo, err := repository.NewRepository()
 	if err != nil {
 		return err
 	}
 
-	pb.RegisterMessagingServer(grpcServer, &Server{smsVendor: smsVendor, mailVendor: mailVendor, repo: repo, cfg: &cfg})
+	pb.RegisterMessagingServer(grpcServer, &Server{smsVendor: smsVendor, repo: repo, cfg: &cfg})
 	err = grpcServer.Serve(lis)
 
 	if err != nil {
@@ -127,7 +121,11 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	}
 
 	if util.IsEmail(req.PhoneOrEmail) {
-		err = s.mailVendor.SendCode(req.PhoneOrEmail, req.Subject, message)
+		mailVendor, mailErr := s.resolveEmailVendor(req.EmailConfig)
+		if mailErr != nil {
+			return nil, mailErr
+		}
+		err = mailVendor.SendCode(req.PhoneOrEmail, req.Subject, message)
 	} else {
 		err = s.smsVendor.SendCodeNProduct(req.PhoneOrEmail, code, s.cfg.ProductName)
 	}
@@ -202,13 +200,46 @@ func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailW
 		attachments = append(attachments, email.Attachment{Name: req.Attachment.Name, Content: encoded, ContentType: "application/octet-stream"})
 	}
 
-	err := s.mailVendor.SendEmailWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
+	mailVendor, err := s.resolveEmailVendor(req.EmailConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mailVendor.SendEmailWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.SendEmailWithAttachmentResponse{}, nil
+	return &pb.SendEmailWithAttachmentResponse{Success: true}, nil
+}
+
+func (s *Server) resolveEmailVendor(cfg *pb.EmailConfig) (email.EmailVendor, error) {
+	emailCfg, err := translateEmailConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return email.NewVendor(emailCfg)
+}
+
+func translateEmailConfig(cfg *pb.EmailConfig) (email.Config, error) {
+	if cfg == nil {
+		return email.Config{}, fmt.Errorf("email config is required")
+	}
+
+	provider := email.ProviderType(strings.ToUpper(cfg.Provider))
+	if provider == "" {
+		return email.Config{}, fmt.Errorf("email provider is required")
+	}
+
+	switch provider {
+	case email.ProviderPostmark, email.ProviderMailchimp:
+		result := email.Config{Provider: provider, APIKey: cfg.ApiKey, EmailSender: cfg.EmailSender}
+		return result, nil
+	default:
+		return email.Config{}, fmt.Errorf("unsupported email provider: %s", cfg.Provider)
+	}
 }
 
 func templateToMessage(msgTemplate string, code string) (string, error) {

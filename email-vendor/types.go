@@ -16,3 +16,16 @@ type EmailVendor interface {
 	SendEmail(to, bcc, sub, msg string) error
 	SendEmailWithAttachment(to, bcc, sub, msg string, attachments []Attachment) error
 }
+
+type ProviderType string
+
+const (
+	ProviderPostmark  ProviderType = "POSTMARK"
+	ProviderMailchimp ProviderType = "MAILCHIMP"
+)
+
+type Config struct {
+	Provider    ProviderType
+	APIKey      string
+	EmailSender string
+}

@@ -3,27 +3,24 @@ package email
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
-
-	"github.com/kelseyhightower/envconfig"
 )
 
 type MailchimpVendor struct {
-	cfg MailchimpConfig
+	cfg Config
 }
 
-type MailchimpConfig struct {
-	MailchimpApiKey      string `envconfig:"MAILCHIMP_API_KEY"`
-	MailchimpEmailSender string `envconfig:"MAILCHIMP_EMAIL_SENDER"`
-}
-
-func NewMailchimpVendor() (*MailchimpVendor, error) {
-	var cfg MailchimpConfig
-	err := envconfig.Process("", &cfg)
-	if err != nil {
-		log.Fatal(err)
+func NewMailchimpVendor(cfg Config) (*MailchimpVendor, error) {
+	if cfg.Provider != ProviderMailchimp {
+		return nil, errors.New("mailchimp vendor requires provider MAILCHIMP")
+	}
+	if cfg.APIKey == "" {
+		return nil, errors.New("mailchimp api key is required")
+	}
+	if cfg.EmailSender == "" {
+		return nil, errors.New("mailchimp sender is required")
 	}
 
 	return &MailchimpVendor{cfg: cfg}, nil
@@ -48,11 +45,11 @@ type To struct {
 func (v *MailchimpVendor) SendEmail(to, bcc, sub, msg string) error {
 	// Prepare the payload
 	payload := SendMessageRequest{
-		Key: v.cfg.MailchimpApiKey,
+		Key: v.cfg.APIKey,
 	}
 
 	// Set message details
-	payload.Message.FromEmail = v.cfg.MailchimpEmailSender
+	payload.Message.FromEmail = v.cfg.EmailSender
 	payload.Message.Subject = sub
 	payload.Message.Text = msg
 	payload.Message.To = []To{

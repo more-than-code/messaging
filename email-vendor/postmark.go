@@ -2,42 +2,41 @@ package email
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"os/exec"
 	"strings"
 
 	"github.com/keighl/postmark"
-	"github.com/kelseyhightower/envconfig"
 )
 
-type Vendor struct {
-	cfg MailConfig
+type PostmarkVendor struct {
+	cfg Config
 }
 
-type MailConfig struct {
-	PostmarkApiKey      string `envconfig:"POSTMARK_API_KEY"`
-	PostmarkEmailSender string `envconfig:"POSTMARK_MAIL_SENDER"`
-}
-
-func NewVendor() (*Vendor, error) {
-	var cfg MailConfig
-	err := envconfig.Process("", &cfg)
-	if err != nil {
-		log.Fatal(err)
+func NewPostmarkVendor(cfg Config) (*PostmarkVendor, error) {
+	if cfg.Provider != ProviderPostmark {
+		return nil, errors.New("postmark vendor requires provider POSTMARK")
+	}
+	if cfg.APIKey == "" {
+		return nil, errors.New("postmark api key is required")
+	}
+	if cfg.EmailSender == "" {
+		return nil, errors.New("postmark sender is required")
 	}
 
-	return &Vendor{cfg: cfg}, nil
+	return &PostmarkVendor{cfg: cfg}, nil
 }
 
-func (v *Vendor) SendCode(mailAddress, sub, msg string) error {
+func (v *PostmarkVendor) SendCode(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
-	client := postmark.NewClient(v.cfg.PostmarkApiKey, "")
+	client := postmark.NewClient(v.cfg.APIKey, "")
 
 	email := postmark.Email{
-		From:     v.cfg.PostmarkEmailSender,
+		From:     v.cfg.EmailSender,
 		To:       mailAddress,
 		Subject:  subject,
 		HtmlBody: htmlContent,
@@ -58,7 +57,7 @@ func (v *Vendor) SendCode(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
+func (v *PostmarkVendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
@@ -72,9 +71,9 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	arg4_1 := "-H"
 	arg4_2 := "Content-Type: application/json"
 	arg5_1 := "-H"
-	arg5_2 := fmt.Sprintf("X-Postmark-Server-Token: %s", v.cfg.PostmarkApiKey)
+	arg5_2 := fmt.Sprintf("X-Postmark-Server-Token: %s", v.cfg.APIKey)
 	arg6_1 := "-d"
-	arg6_2 := fmt.Sprintf("{From: '%s', To: '%s', Subject: '%s', HtmlBody: '%s'}", v.cfg.PostmarkEmailSender, mailAddress, subject, htmlContent)
+	arg6_2 := fmt.Sprintf("{From: '%s', To: '%s', Subject: '%s', HtmlBody: '%s'}", v.cfg.EmailSender, mailAddress, subject, htmlContent)
 
 	cmd := exec.Command(prg, arg1, arg2_1, arg2_2, arg3_1, arg3_2, arg4_1, arg4_2, arg5_1, arg5_2, arg6_1, arg6_2)
 	stdout, err := cmd.Output()
@@ -89,14 +88,14 @@ func (v *Vendor) SendCodeFromPostmark2(mailAddress, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendEmail(to, bcc, sub, msg string) error {
+func (v *PostmarkVendor) SendEmail(to, bcc, sub, msg string) error {
 	subject := sub
 	htmlContent := msg
 
-	client := postmark.NewClient(v.cfg.PostmarkApiKey, "")
+	client := postmark.NewClient(v.cfg.APIKey, "")
 
 	email := postmark.Email{
-		From:       v.cfg.PostmarkEmailSender,
+		From:       v.cfg.EmailSender,
 		To:         to,
 		Bcc:        bcc,
 		Subject:    subject,
@@ -117,11 +116,11 @@ func (v *Vendor) SendEmail(to, bcc, sub, msg string) error {
 	return nil
 }
 
-func (v *Vendor) SendEmailWithAttachment(to, bcc, sub, msg string, attachments []Attachment) error {
+func (v *PostmarkVendor) SendEmailWithAttachment(to, bcc, sub, msg string, attachments []Attachment) error {
 	subject := sub
 	htmlContent := msg
 
-	client := postmark.NewClient(v.cfg.PostmarkApiKey, "")
+	client := postmark.NewClient(v.cfg.APIKey, "")
 
 	pmAttachments := []postmark.Attachment{}
 	for _, a := range attachments {
@@ -135,7 +134,7 @@ func (v *Vendor) SendEmailWithAttachment(to, bcc, sub, msg string, attachments [
 	}
 
 	email := postmark.Email{
-		From:        v.cfg.PostmarkEmailSender,
+		From:        v.cfg.EmailSender,
 		To:          to,
 		Bcc:         bcc,
 		Subject:     subject,
