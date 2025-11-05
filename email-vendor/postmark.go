@@ -30,6 +30,7 @@ func NewPostmarkVendor(cfg Config) (*PostmarkVendor, error) {
 }
 
 func (v *PostmarkVendor) SendCode(mailAddress, sub, msg string) error {
+	log.Printf("postmark: sending code to %s with subject %s", mailAddress, sub)
 	subject := sub
 	htmlContent := msg
 
@@ -48,11 +49,11 @@ func (v *PostmarkVendor) SendCode(mailAddress, sub, msg string) error {
 	res, err := client.SendEmail(email)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("postmark: failed to send code to %s: %v", mailAddress, err)
 		return err
 	}
 
-	log.Println(res)
+	log.Printf("postmark: sent code to %s, message id %s", mailAddress, res.MessageID)
 
 	return nil
 }
@@ -79,16 +80,17 @@ func (v *PostmarkVendor) SendCodeFromPostmark2(mailAddress, sub, msg string) err
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("postmark: curl fallback failed for %s: %v", mailAddress, err)
 		return err
 	}
 
-	log.Println(string(stdout))
+	log.Printf("postmark: curl fallback response for %s: %s", mailAddress, string(stdout))
 
 	return nil
 }
 
 func (v *PostmarkVendor) SendEmail(to, bcc, sub, msg string) error {
+	log.Printf("postmark: sending email to %s, bcc %s", to, bcc)
 	subject := sub
 	htmlContent := msg
 
@@ -107,16 +109,17 @@ func (v *PostmarkVendor) SendEmail(to, bcc, sub, msg string) error {
 	res, err := client.SendEmail(email)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("postmark: failed to send email to %s: %v", to, err)
 		return err
 	}
 
-	log.Println(res)
+	log.Printf("postmark: sent email to %s, message id %s", to, res.MessageID)
 
 	return nil
 }
 
 func (v *PostmarkVendor) SendEmailWithAttachment(to, bcc, sub, msg string, attachments []Attachment) error {
+	log.Printf("postmark: sending email with %d attachments to %s", len(attachments), to)
 	subject := sub
 	htmlContent := msg
 
@@ -127,7 +130,7 @@ func (v *PostmarkVendor) SendEmailWithAttachment(to, bcc, sub, msg string, attac
 		// content is expected to be base64 encoded string in email.Attachment
 		decoded, err := base64.StdEncoding.DecodeString(a.Content)
 		if err != nil {
-			log.Println("failed to decode attachment content:", err)
+			log.Printf("postmark: failed to decode attachment %s: %v", a.Name, err)
 			return err
 		}
 		pmAttachments = append(pmAttachments, postmark.Attachment{Name: a.Name, Content: string(decoded), ContentType: a.ContentType})
@@ -147,11 +150,11 @@ func (v *PostmarkVendor) SendEmailWithAttachment(to, bcc, sub, msg string, attac
 	res, err := client.SendEmail(email)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("postmark: failed to send email with attachment to %s: %v", to, err)
 		return err
 	}
 
-	log.Println(res)
+	log.Printf("postmark: sent email with attachment to %s, message id %s", to, res.MessageID)
 
 	return nil
 }
