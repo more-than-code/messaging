@@ -80,12 +80,16 @@ func NewServer() error {
 		return err
 	}
 
+	log.Printf("messaging server starting gRPC listener on %s", cfg.ServerPort)
 	pb.RegisterMessagingServer(grpcServer, &Server{smsVendor: smsVendor, repo: repo, cfg: &cfg})
 	err = grpcServer.Serve(lis)
 
 	if err != nil {
+		log.Printf("messaging server stopped with error: %v", err)
 		return err
 	}
+
+	log.Printf("messaging server stopped on %s", cfg.ServerPort)
 
 	return nil
 }
