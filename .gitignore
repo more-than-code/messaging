@@ -2,3 +2,4 @@
 .env
 .vscode
 *_test.go
+startup.sh
