@@ -1,0 +1,1 @@
+export $(cat .env | grep -v '^#' | xargs) && go run cmd/main.go
