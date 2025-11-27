@@ -1,7 +1,6 @@
 package email
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -127,13 +126,12 @@ func (v *PostmarkVendor) SendEmailWithAttachment(to, bcc, sub, msg string, attac
 
 	pmAttachments := []postmark.Attachment{}
 	for _, a := range attachments {
-		// content is expected to be base64 encoded string in email.Attachment
-		decoded, err := base64.StdEncoding.DecodeString(a.Content)
-		if err != nil {
-			log.Printf("postmark: failed to decode attachment %s: %v", a.Name, err)
-			return err
-		}
-		pmAttachments = append(pmAttachments, postmark.Attachment{Name: a.Name, Content: string(decoded), ContentType: a.ContentType})
+		// Postmark expects base64 encoded string, same as our internal format
+		pmAttachments = append(pmAttachments, postmark.Attachment{
+			Name:        a.Name,
+			Content:     a.Content, // Already base64 encoded
+			ContentType: a.ContentType,
+		})
 	}
 
 	email := postmark.Email{

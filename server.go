@@ -152,47 +152,65 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 }
 
 func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateVerificationCodeRequest) (*pb.ValidateVerificationCodeResponse, error) {
+	log.Printf("[ValidateVerificationCode] START - PhoneOrEmail: %s, Code: %s", req.PhoneOrEmail, req.VerificationCode)
+
 	var msg = constant.MsgValid
 	var status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_VALID
 
-	if s.cfg.IsDev {
+	// if s.cfg.IsDev {
+	// 	log.Printf("[ValidateVerificationCode] IsDev mode enabled, returning VALID directly")
+	// 	return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
+	// }
+
+	// Check email bypass code
+	emailDomains := strings.Split(s.cfg.EmailDomains, ",")
+	userDomain := util.DomainFromAddress(req.PhoneOrEmail)
+	if util.Contains(emailDomains, userDomain) && req.VerificationCode == s.cfg.EmailBypassCode {
+		log.Printf("[ValidateVerificationCode] Email bypass code matched for domain: %s", userDomain)
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 	}
 
-	if util.Contains(strings.Split(s.cfg.EmailDomains, ","), util.DomainFromAddress(req.PhoneOrEmail)) && req.VerificationCode == s.cfg.EmailBypassCode {
+	// Check phone bypass code
+	if !util.IsEmail(req.PhoneOrEmail) && req.VerificationCode == s.cfg.PhoneBypassCode {
+		log.Printf("[ValidateVerificationCode] Phone bypass code matched")
 		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
-	} else if !util.IsEmail(req.PhoneOrEmail) && req.VerificationCode == s.cfg.PhoneBypassCode {
-		return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
-
 	}
 
 	found, err := s.repo.GetVerificationInfo(ctx, req.PhoneOrEmail)
-
 	if err != nil {
+		log.Printf("[ValidateVerificationCode] ERROR getting verification info: %v", err)
 		return nil, err
 	}
 
+	log.Printf("[ValidateVerificationCode] Found in Redis: %v", found != nil)
 	if found != nil {
+		log.Printf("[ValidateVerificationCode] Stored Code: %s, Request Code: %s, Attempt: %d", found.Code, req.VerificationCode, found.Attempt)
+
 		if found.Code == req.VerificationCode {
-			s.repo.DeleteVerificationInfo(ctx, req.PhoneOrEmail)
+			log.Printf("[ValidateVerificationCode] Code MATCHED - returning VALID")
+			s.repo.DeleteVerificationInfo(ctx, strings.ToLower(req.PhoneOrEmail))
 		} else {
+			log.Printf("[ValidateVerificationCode] Code MISMATCH")
 			if found.Attempt >= 3 {
+				log.Printf("[ValidateVerificationCode] Maximum attempts reached")
 				msg = constant.MsgMaximumAttempts
 				status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_MAXIMUM_ATTEMPTS
-				s.repo.DeleteVerificationInfo(ctx, req.PhoneOrEmail)
-			} else if found.Code != req.VerificationCode {
+				s.repo.DeleteVerificationInfo(ctx, strings.ToLower(req.PhoneOrEmail))
+			} else {
+				log.Printf("[ValidateVerificationCode] Invalid code, incrementing attempt to %d", found.Attempt+1)
 				msg = constant.MsgInvalid
 				status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_INVALID
 				found.Attempt++
 				s.repo.SetVerificationInfo(ctx, req.PhoneOrEmail, found)
 			}
 		}
-
 	} else {
+		log.Printf("[ValidateVerificationCode] No verification info found - code EXPIRED")
 		msg = constant.MsgExpired
 		status = pb.VerificationCodeValidationStatus_VERIFICATION_CODE_VALIDATION_STATUS_EXPIRED
 	}
 
+	log.Printf("[ValidateVerificationCode] FINAL RESULT - Status: %v, Msg: %s", status, msg)
 	return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 }
 
