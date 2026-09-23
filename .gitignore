@@ -3,3 +3,4 @@
 .vscode
 *_test.go
 startup.sh
+/dist/

@@ -1,13 +1,6 @@
-FROM golang:1.21-alpine AS build
-RUN apk --no-cache add gcc g++ make ca-certificates
-WORKDIR /go/src/mo-service
+FROM curlimages/curl:8.22.0
 
-COPY go.mod go.sum ./
-COPY . .
+# 基礎鏡像已含 curl 與 CA 憑證；郵件備援流程仍可呼叫外部服務。
+COPY dist/app /usr/local/bin/app
 
-RUN go build -o /go/bin/app ./cmd
-
-FROM alpine:3.18
-WORKDIR /usr/bin
-COPY --from=build /go/bin .
-CMD ["app"]
+ENTRYPOINT ["/usr/local/bin/app"]
