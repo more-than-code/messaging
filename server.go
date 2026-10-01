@@ -35,6 +35,10 @@ type ServerConfig struct {
 	IsDev           bool   `envconfig:"IS_DEV"`
 	ServerPort      string `envconfig:"SERVER_PORT"`
 	ProductName     string `envconfig:"PRODUCT_NAME"`
+	// PostmarkAPIKey 供未傳入郵件配置的舊版客戶端使用，不得寫入日誌。
+	PostmarkAPIKey string `envconfig:"POSTMARK_API_KEY"`
+	// PostmarkMailSender 為舊版部署已在 Postmark 驗證的寄件地址。
+	PostmarkMailSender string `envconfig:"POSTMARK_MAIL_SENDER"`
 }
 
 type Server struct {
@@ -94,20 +98,28 @@ func NewServer() error {
 	return nil
 }
 
+// GenerateVerificationCode 依 req 的收件地址與模板發送驗證碼，使用 ctx 存取快取；回傳發送狀態或失敗原因。
 func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateVerificationCodeRequest) (*pb.GenerateVerificationCodeResponse, error) {
+	channel := "sms"
+	if util.IsEmail(req.PhoneOrEmail) {
+		channel = "email"
+	}
+	// 僅記錄通道與執行階段，避免將收件地址、驗證碼或請求憑證寫入發送流程日誌。
+	log.Printf("[GenerateVerificationCode] start channel=%s", channel)
 	res := &pb.GenerateVerificationCodeResponse{Status: pb.VerificationCodeGenerationStatus_VERIFICATION_CODE_GENERATION_STATUS_DONE, Msg: string(constant.MsgDone)}
 	var err error
 
 	found, err := s.repo.GetVerificationInfo(ctx, req.PhoneOrEmail)
 
 	if err != nil {
+		log.Printf("[GenerateVerificationCode] failed stage=read_verification_info error=%v", err)
 		return nil, err
 	}
 
+	// 先檢查重發間隔，避免重複呼叫外部供應商與產生額外費用。
 	if found != nil {
 		if time.Since(found.LastAttempt).Minutes() <= 1 {
-			str := fmt.Sprintf("Code sent for %s within 1 minute", req.PhoneOrEmail)
-			fmt.Println(str)
+			log.Printf("[GenerateVerificationCode] rate_limited channel=%s", channel)
 
 			res.Status = pb.VerificationCodeGenerationStatus_VERIFICATION_CODE_GENERATION_STATUS_SENDING_TOO_FREQUENTLY
 			res.Msg = string(constant.MsgSendingTooFrequently)
@@ -121,12 +133,15 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	message, err := templateToMessage(req.MessageTemplate, code)
 
 	if err != nil {
+		log.Printf("[GenerateVerificationCode] failed stage=render_template error=%v", err)
 		return nil, err
 	}
 
-	if util.IsEmail(req.PhoneOrEmail) {
+	// 郵件供應商依新舊配置解析；電話維持既有簡訊供應商流程。
+	if channel == "email" {
 		mailVendor, mailErr := s.resolveEmailVendor(req.EmailConfig)
 		if mailErr != nil {
+			log.Printf("[GenerateVerificationCode] failed stage=email_config error=%v", mailErr)
 			return nil, mailErr
 		}
 		err = mailVendor.SendCode(req.PhoneOrEmail, req.Subject, message)
@@ -135,18 +150,21 @@ func (s *Server) GenerateVerificationCode(ctx context.Context, req *pb.GenerateV
 	}
 
 	if err != nil {
+		log.Printf("[GenerateVerificationCode] failed stage=send channel=%s error=%v", channel, err)
 		return nil, err
 	}
 
+	// 供應商確認發送後才保存驗證碼；寫入失敗須獨立記錄，因為訊息可能已送達。
 	ph := repository.VerificationInfo{Code: code, Attempt: 0, LastAttempt: time.Now()}
 
 	err = s.repo.SetVerificationInfo(ctx, req.PhoneOrEmail, &ph)
 
 	if err != nil {
+		log.Printf("[GenerateVerificationCode] failed stage=save_verification_info channel=%s error=%v", channel, err)
 		return nil, err
 	}
 
-	log.Println("Sent to " + req.PhoneOrEmail + " with code " + code)
+	log.Printf("[GenerateVerificationCode] done channel=%s", channel)
 
 	return res, nil
 }
@@ -214,29 +232,52 @@ func (s *Server) ValidateVerificationCode(ctx context.Context, req *pb.ValidateV
 	return &pb.ValidateVerificationCodeResponse{Status: status, Msg: string(msg)}, nil
 }
 
+// SendEmailWithAttachment 處理 ctx 所屬 RPC，依 req 的郵件配置與附件發送郵件，回傳成功狀態或失敗原因。
 func (s *Server) SendEmailWithAttachment(ctx context.Context, req *pb.SendEmailWithAttachmentRequest) (*pb.SendEmailWithAttachmentResponse, error) {
+	log.Printf("[SendEmailWithAttachment] start")
 	attachments := []email.Attachment{}
 	if req.Attachment != nil {
-		// PB Attachment content is bytes; email.Attachment expects base64-encoded string
+		// RPC 附件為原始位元組，供應商介面要求 Base64，須先轉換再發送。
 		encoded := base64.StdEncoding.EncodeToString(req.Attachment.Content)
 		attachments = append(attachments, email.Attachment{Name: req.Attachment.Name, Content: encoded, ContentType: "application/octet-stream"})
 	}
 
 	mailVendor, err := s.resolveEmailVendor(req.EmailConfig)
 	if err != nil {
+		log.Printf("[SendEmailWithAttachment] failed stage=email_config error=%v", err)
 		return nil, err
 	}
 
+	// 與驗證碼共用配置解析，讓舊版附件郵件呼叫也能使用部署環境配置。
 	err = mailVendor.SendEmailWithAttachment(req.To, req.Bcc, req.Subject, req.Message, attachments)
 
 	if err != nil {
+		log.Printf("[SendEmailWithAttachment] failed stage=send error=%v", err)
 		return nil, err
 	}
 
+	log.Printf("[SendEmailWithAttachment] done")
 	return &pb.SendEmailWithAttachmentResponse{Success: true}, nil
 }
 
+// resolveEmailVendor 優先使用 cfg；僅 cfg 缺省時採用舊版 Postmark 環境配置，回傳供應商或配置錯誤。
 func (s *Server) resolveEmailVendor(cfg *pb.EmailConfig) (email.EmailVendor, error) {
+	source := "request"
+	if cfg == nil {
+		source = "environment"
+		if s.cfg == nil {
+			return nil, fmt.Errorf("legacy postmark server config is required")
+		}
+		// 舊版客戶端未定義 EmailConfig，沿用原先固定使用 Postmark 的部署契約。
+		cfg = &pb.EmailConfig{
+			Provider:    string(email.ProviderPostmark),
+			ApiKey:      s.cfg.PostmarkAPIKey,
+			EmailSender: s.cfg.PostmarkMailSender,
+		}
+	}
+	log.Printf("[resolveEmailVendor] source=%s provider=%q", source, cfg.Provider)
+
+	// 明確傳入的空配置或錯誤憑證必須報錯，禁止回退至其他寄件帳號。
 	emailCfg, err := translateEmailConfig(cfg)
 	if err != nil {
 		return nil, err
